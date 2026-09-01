@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>My Class Routine — Momenur Rashid</title>
+<meta name="description" content="A live class routine with room finder and teacher finder.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,500;1,9..144,600&family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="bg-decor" aria-hidden="true"></div>
+
+<div class="shell">
+
+  <!-- HEADER -->
+  <header class="topbar">
+    <div class="brand">
+      <span class="eyebrow">MOMENUR RASHID · CSE</span>
+      <h1 class="wordmark">My class<br><em>routine.</em></h1>
+    </div>
+    <button class="refresh-btn" id="refreshBtn" type="button" aria-label="Refresh data">
+      <svg class="refresh-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>
+      <span>Refresh</span>
+    </button>
+  </header>
+
+  <p class="status-line" id="statusLine">Loading your routine…</p>
+
+  <!-- NAV TABS -->
+  <nav class="view-tabs" role="tablist" aria-label="Sections">
+    <button class="view-tab is-active" data-view="routine" role="tab" aria-selected="true">Routine</button>
+    <button class="view-tab" data-view="room" role="tab" aria-selected="false">Room Finder</button>
+    <button class="view-tab" data-view="teacher" role="tab" aria-selected="false">Teacher Finder</button>
+  </nav>
+
+  <!-- ===================== ROUTINE VIEW ===================== -->
+  <section class="view-panel is-active" id="view-routine" role="tabpanel">
+
+    <div class="picker-row">
+      <label class="picker">
+        <span>Semester</span>
+        <select id="semesterSelect"></select>
+      </label>
+      <label class="picker">
+        <span>Section</span>
+        <select id="sectionSelect"></select>
+      </label>
+      <button class="save-default-btn" id="saveDefaultBtn" type="button">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"/><path d="M17 21v-8H7v8"/><path d="M7 3v5h8"/></svg>
+        <span>Save as Default</span>
+      </button>
+    </div>
+
+    <div class="up-next-card" id="upNextCard" hidden>
+      <span class="up-next-label" id="upNextLabel">UP NEXT</span>
+      <div class="up-next-body">
+        <div class="up-next-time">
+          <span id="upNextSlot"></span>
+          <span id="upNextTime"></span>
+        </div>
+        <div class="up-next-info">
+          <strong id="upNextCourse"></strong>
+          <span id="upNextSub"></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="weekly-plan-head">
+      <div>
+        <span class="eyebrow eyebrow-muted">WEEKLY PLAN</span>
+        <h2>Your schedule</h2>
+      </div>
+      <span class="class-count" id="classCount"></span>
+    </div>
+
+    <div class="day-pills" id="dayPills"></div>
+
+    <div class="day-classes" id="dayClasses"></div>
+
+  </section>
+
+  <!-- ===================== ROOM FINDER VIEW ===================== -->
+  <section class="view-panel" id="view-room" role="tabpanel" hidden>
+    <div class="finder-head">
+      <span class="eyebrow eyebrow-muted">SMART FINDER</span>
+      <h2>Room Finder</h2>
+      <p class="finder-copy">Type a room number to see every class held there this week, no matter the day.</p>
+    </div>
+    <div class="finder-search">
+      <input type="text" id="roomInput" list="roomList" placeholder="e.g. 509 or 106 DSAL" autocomplete="off">
+      <datalist id="roomList"></datalist>
+    </div>
+    <div class="finder-results" id="roomResults"></div>
+  </section>
+
+  <!-- ===================== TEACHER FINDER VIEW ===================== -->
+  <section class="view-panel" id="view-teacher" role="tabpanel" hidden>
+    <div class="finder-head">
+      <span class="eyebrow eyebrow-muted">SMART FINDER</span>
+      <h2>Teacher Finder</h2>
+      <p class="finder-copy">Type a teacher's name to see their full week — day, room, and class.</p>
+    </div>
+    <div class="finder-search">
+      <input type="text" id="teacherInput" list="teacherList" placeholder="e.g. Shah Rafatur Rahman" autocomplete="off">
+      <datalist id="teacherList"></datalist>
+    </div>
+    <div class="finder-results" id="teacherResults"></div>
+  </section>
+
+  <footer class="site-footer">
+    Crafted with <span class="heart">♥</span> by Momenur Rashid
+  </footer>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="data.js"></script>
+<script src="script.js"></script>
+</body>
+</html>
