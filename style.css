@@ -16,11 +16,19 @@
 
   --sun:  #FF6B57;   /* Sunday  - coral  */
   --mon:  #FFA724;   /* Monday  - amber  */
-  --tue:  #E2496C;   /* Tuesday - red-pink from reference */
+  --tue:  #E2496C;   /* Tuesday - red-pink */
   --wed:  #2E6BFF;   /* Wednesday - blue */
   --thu:  #16B27B;   /* Thursday - green */
   --fri:  #8C63F2;   /* Friday  - violet */
   --sat:  #16A0B8;   /* Saturday- teal   */
+
+  --sun-soft: #FFE4DC;
+  --mon-soft: #FFEBCC;
+  --tue-soft: #FCDCE6;
+  --wed-soft: #DCE6FF;
+  --thu-soft: #D6F5E7;
+  --fri-soft: #E7DDFF;
+  --sat-soft: #D7F3F8;
 
   --radius-s: 10px;
   --radius-m: 16px;
@@ -376,18 +384,19 @@ body{
 .class-meta span:last-child{ font-size: 13.5px; font-weight: 600; color: var(--ink); }
 
 .gap-card{
-  border-left-style: dashed;
-  border-left-color: var(--line);
-  color: var(--ink-faint);
+  border-left: 4px dashed var(--fri);
+  color: var(--ink);
   display:flex; align-items:center; gap:10px;
   padding: 13px 17px;
+  border-radius: var(--radius-m);
   box-shadow: none;
-  background: transparent;
+  background: var(--fri-soft);
+  font-weight: 600;
 }
-.gap-card .class-slot{ color: var(--ink-faint); }
+.gap-card .class-slot{ color: var(--fri); font-weight: 800; }
 .gap-card.is-break{
   border-left-color: var(--mon);
-  background: #FFF7EA;
+  background: #FFF1D6;
 }
 .gap-card.is-break .class-slot{ color: var(--mon); }
 

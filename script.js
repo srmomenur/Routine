@@ -6,8 +6,7 @@
    ========================================================= */
 const CONFIG = {
   // Example: "https://script.google.com/macros/s/AKfycb.../exec"
-  API_URL:
-    "https://script.google.com/macros/s/AKfycbzXkOlXyjeUxXFnywvPDtiwf5EPudN1axXOQxsn4wWc3vkcXRb8ANqct8b1AS3Hh4yZ/exec",
+  API_URL: "https://script.google.com/macros/s/AKfycbzXkOlXyjeUxXFnywvPDtiwf5EPudN1axXOQxsn4wWc3vkcXRb8ANqct8b1AS3Hh4yZ/exec",
   FETCH_TIMEOUT_MS: 8000,
   CACHE_KEY: "routine_data_cache_v1",
   DEFAULT_KEY: "routine_default_v1",
@@ -27,33 +26,25 @@ const SLOT_TEMPLATE = [
 ];
 
 // Bangladesh academic week order (Saturday first, Friday off).
-const WEEK_ORDER = [
-  "Saturday",
-  "Sunday",
-  "Monday",
-  "Tuesday",
-  "Wednesday",
-  "Thursday",
-  "Friday",
-];
-const DAY_SHORT = {
-  Saturday: "Sat",
-  Sunday: "Sun",
-  Monday: "Mon",
-  Tuesday: "Tue",
-  Wednesday: "Wed",
-  Thursday: "Thu",
-  Friday: "Fri",
-};
-const DAY_COLOR = {
-  Saturday: "var(--sat)",
-  Sunday: "var(--sun)",
-  Monday: "var(--mon)",
-  Tuesday: "var(--tue)",
-  Wednesday: "var(--wed)",
-  Thursday: "var(--thu)",
-  Friday: "var(--fri)",
-};
+const WEEK_ORDER = ["Saturday", "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
+const WEEKEND_DAYS = ["Friday", "Saturday"];
+const DAY_SHORT = { Saturday: "Sat", Sunday: "Sun", Monday: "Mon", Tuesday: "Tue", Wednesday: "Wed", Thursday: "Thu", Friday: "Fri" };
+const DAY_COLOR = { Saturday: "var(--sat)", Sunday: "var(--sun)", Monday: "var(--mon)", Tuesday: "var(--tue)", Wednesday: "var(--wed)", Thursday: "var(--thu)", Friday: "var(--fri)" };
+const DAY_COLOR_SOFT = { Saturday: "var(--sat-soft)", Sunday: "var(--sun-soft)", Monday: "var(--mon-soft)", Tuesday: "var(--tue-soft)", Wednesday: "var(--wed-soft)", Thursday: "var(--thu-soft)", Friday: "var(--fri-soft)" };
+
+// Rotate WEEK_ORDER so it starts at `day` (wraps around).
+function weekOrderStartingFrom(day) {
+  const idx = WEEK_ORDER.indexOf(day);
+  if (idx === -1) return WEEK_ORDER.slice();
+  return [...WEEK_ORDER.slice(idx), ...WEEK_ORDER.slice(0, idx)];
+}
+
+// The day a finder search should lead with: today, unless today is the
+// weekend (Fri/Sat) — then lead with Sunday since that's the next class day.
+function finderStartDay() {
+  const today = nowInDhaka().weekday;
+  return WEEKEND_DAYS.includes(today) ? "Sunday" : today;
+}
 
 let ALL_CLASSES = [];
 let state = { semester: null, section: null, day: null };
@@ -62,9 +53,7 @@ let state = { semester: null, section: null, day: null };
 
 function parseTimeToMinutes(t) {
   if (!t) return null;
-  const m = String(t)
-    .trim()
-    .match(/(\d{1,2}):(\d{2})\s*([AP])M/i);
+  const m = String(t).trim().match(/(\d{1,2}):(\d{2})\s*([AP])M/i);
   if (!m) return null;
   let h = parseInt(m[1], 10);
   const min = parseInt(m[2], 10);
@@ -133,8 +122,7 @@ function normalizeRow(row) {
       room: row.room,
     };
   }
-  const get = (obj, key) =>
-    obj[key] ?? obj[key.toLowerCase()] ?? obj[key.replace(/\s+/g, "")];
+  const get = (obj, key) => obj[key] ?? obj[key.toLowerCase()] ?? obj[key.replace(/\s+/g, "")];
   const semester = get(row, "Semester");
   const section = get(row, "Section");
   const day = get(row, "Day");
@@ -144,9 +132,7 @@ function normalizeRow(row) {
   const teacher = get(row, "Teacher");
   const room = get(row, "Room");
   if (!semester || !time) return null;
-  const m = String(time).match(
-    /Slot\s*(\d+)\s+(\d{1,2}:\d{2}\s*[AP]M)\s*-\s*(\d{1,2}:\d{2}\s*[AP]M)/i,
-  );
+  const m = String(time).match(/Slot\s*(\d+)\s+(\d{1,2}:\d{2}\s*[AP]M)\s*-\s*(\d{1,2}:\d{2}\s*[AP]M)/i);
   if (!m) return null;
   return {
     semester: String(semester).trim(),
@@ -173,10 +159,7 @@ async function fetchWithTimeout(url, ms) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), ms);
   try {
-    const res = await fetch(url, {
-      signal: controller.signal,
-      cache: "no-store",
-    });
+    const res = await fetch(url, { signal: controller.signal, cache: "no-store" });
     if (!res.ok) throw new Error("Bad response: " + res.status);
     return await res.json();
   } finally {
@@ -190,10 +173,7 @@ async function loadData(forceRefresh = false) {
 
   if (canTryLive) {
     try {
-      const raw = await fetchWithTimeout(
-        CONFIG.API_URL,
-        CONFIG.FETCH_TIMEOUT_MS,
-      );
+      const raw = await fetchWithTimeout(CONFIG.API_URL, CONFIG.FETCH_TIMEOUT_MS);
       const normalized = normalizeDataset(raw);
       if (normalized.length) {
         ALL_CLASSES = normalized;
@@ -212,28 +192,14 @@ async function loadData(forceRefresh = false) {
     try {
       ALL_CLASSES = JSON.parse(cached);
       renderStatus(false);
-      if (forceRefresh)
-        showToast(
-          canTryLive
-            ? "Couldn't reach your sheet — showing last saved data"
-            : "Showing saved data",
-        );
+      if (forceRefresh) showToast(canTryLive ? "Couldn't reach your sheet — showing last saved data" : "Showing saved data");
       return;
-    } catch (e) {
-      /* ignore, fall through */
-    }
+    } catch (e) { /* ignore, fall through */ }
   }
 
-  ALL_CLASSES = normalizeDataset(
-    typeof FALLBACK_CLASSES !== "undefined" ? FALLBACK_CLASSES : [],
-  );
+  ALL_CLASSES = normalizeDataset(typeof FALLBACK_CLASSES !== "undefined" ? FALLBACK_CLASSES : []);
   renderStatus(false);
-  if (forceRefresh)
-    showToast(
-      canTryLive
-        ? "Couldn't reach your sheet — showing sample data"
-        : "Showing sample data",
-    );
+  if (forceRefresh) showToast(canTryLive ? "Couldn't reach your sheet — showing sample data" : "Showing sample data");
 }
 
 function renderStatus(isLive) {
@@ -249,23 +215,15 @@ function renderStatus(isLive) {
 function populateSemesterSelect() {
   const sel = document.getElementById("semesterSelect");
   const semesters = [...new Set(ALL_CLASSES.map((c) => c.semester))].sort(
-    (a, b) => semesterSortKey(a) - semesterSortKey(b),
+    (a, b) => semesterSortKey(a) - semesterSortKey(b)
   );
-  sel.innerHTML = semesters
-    .map((s) => `<option value="${s}">${s}</option>`)
-    .join("");
+  sel.innerHTML = semesters.map((s) => `<option value="${s}">${s}</option>`).join("");
 }
 
 function populateSectionSelect(semester) {
   const sel = document.getElementById("sectionSelect");
-  const sections = [
-    ...new Set(
-      ALL_CLASSES.filter((c) => c.semester === semester).map((c) => c.section),
-    ),
-  ].sort();
-  sel.innerHTML = sections
-    .map((s) => `<option value="${s}">Section ${s}</option>`)
-    .join("");
+  const sections = [...new Set(ALL_CLASSES.filter((c) => c.semester === semester).map((c) => c.section))].sort();
+  sel.innerHTML = sections.map((s) => `<option value="${s}">Section ${s}</option>`).join("");
 }
 
 function applyDefaultsOrFirst() {
@@ -274,21 +232,14 @@ function applyDefaultsOrFirst() {
   const sectionSel = document.getElementById("sectionSelect");
 
   let semester = semesterSel.options[0]?.value;
-  if (
-    saved &&
-    [...semesterSel.options].some((o) => o.value === saved.semester)
-  ) {
+  if (saved && [...semesterSel.options].some((o) => o.value === saved.semester)) {
     semester = saved.semester;
   }
   semesterSel.value = semester;
   populateSectionSelect(semester);
 
   let section = sectionSel.options[0]?.value;
-  if (
-    saved &&
-    saved.semester === semester &&
-    [...sectionSel.options].some((o) => o.value === saved.section)
-  ) {
+  if (saved && saved.semester === semester && [...sectionSel.options].some((o) => o.value === saved.section)) {
     section = saved.section;
   }
   sectionSel.value = section;
@@ -321,9 +272,8 @@ function renderDayPills() {
 /* ---------------- routine rendering ---------------- */
 
 function classesFor(semester, section, day) {
-  return ALL_CLASSES.filter(
-    (c) => c.semester === semester && c.section === section && c.day === day,
-  ).sort((a, b) => a.slot - b.slot);
+  return ALL_CLASSES.filter((c) => c.semester === semester && c.section === section && c.day === day)
+    .sort((a, b) => a.slot - b.slot);
 }
 
 function buildTimeline(semester, section, day) {
@@ -335,12 +285,7 @@ function buildTimeline(semester, section, day) {
     if (slotDef.break) return { type: "break", ...slotDef };
     const cls = bySlot[slotDef.slot];
     if (cls) return { type: "class", ...cls };
-    return {
-      type: "gap",
-      slot: slotDef.slot,
-      start: slotDef.start,
-      end: slotDef.end,
-    };
+    return { type: "gap", slot: slotDef.slot, start: slotDef.start, end: slotDef.end };
   });
 }
 
@@ -368,7 +313,21 @@ function renderDayClasses() {
     return;
   }
 
-  wrap.innerHTML = timeline
+  // Only show the internal gaps/break that fall between this day's first
+  // and last class — never empty slots before the first class or after
+  // the last one.
+  const classIndexes = timeline.reduce((acc, item, i) => {
+    if (item.type === "class") acc.push(i);
+    return acc;
+  }, []);
+  const firstIdx = classIndexes[0];
+  const lastIdx = classIndexes[classIndexes.length - 1];
+  const visibleTimeline = timeline.filter((item, i) => {
+    if (item.type === "class") return true;
+    return i > firstIdx && i < lastIdx;
+  });
+
+  wrap.innerHTML = visibleTimeline
     .map((item, i) => {
       if (item.type === "break") {
         return `<div class="gap-card is-break" style="animation-delay:${i * 30}ms">
@@ -407,19 +366,14 @@ function renderDayClasses() {
 
 function renderUpNext() {
   const card = document.getElementById("upNextCard");
-  if (!state.semester || !state.section) {
-    card.hidden = true;
-    return;
-  }
+  if (!state.semester || !state.section) { card.hidden = true; return; }
 
   const { weekday, minutes } = nowInDhaka();
   const todayIdx = WEEK_ORDER.indexOf(weekday);
 
   for (let offset = 0; offset < 7; offset++) {
     const day = WEEK_ORDER[(todayIdx + offset) % 7];
-    const timeline = buildTimeline(state.semester, state.section, day).filter(
-      (i) => i.type === "class",
-    );
+    const timeline = buildTimeline(state.semester, state.section, day).filter((i) => i.type === "class");
     const upcoming = timeline.find((c) => {
       if (offset > 0) return true;
       return parseTimeToMinutes(c.end) > minutes;
@@ -427,14 +381,10 @@ function renderUpNext() {
     if (upcoming) {
       const label = offset === 0 ? "UP NEXT" : `NEXT — ${day.toUpperCase()}`;
       document.getElementById("upNextLabel").textContent = label;
-      document.getElementById("upNextSlot").textContent =
-        `Slot ${upcoming.slot}`;
-      document.getElementById("upNextTime").textContent =
-        `${upcoming.start} - ${upcoming.end}`;
-      document.getElementById("upNextCourse").textContent =
-        `${upcoming.code} · ${upcoming.title}`;
-      document.getElementById("upNextSub").textContent =
-        `${upcoming.teacher} · Room ${upcoming.room}`;
+      document.getElementById("upNextSlot").textContent = `Slot ${upcoming.slot}`;
+      document.getElementById("upNextTime").textContent = `${upcoming.start} - ${upcoming.end}`;
+      document.getElementById("upNextCourse").textContent = `${upcoming.code} · ${upcoming.title}`;
+      document.getElementById("upNextSub").textContent = `${upcoming.teacher} · Room ${upcoming.room}`;
       card.hidden = false;
       return;
     }
@@ -447,15 +397,14 @@ function renderUpNext() {
 function groupByDayOrdered(rows) {
   const groups = {};
   WEEK_ORDER.forEach((d) => (groups[d] = []));
-  rows.forEach((r) => {
-    if (groups[r.day]) groups[r.day].push(r);
-  });
+  rows.forEach((r) => { if (groups[r.day]) groups[r.day].push(r); });
   WEEK_ORDER.forEach((d) => groups[d].sort((a, b) => a.slot - b.slot));
   return groups;
 }
 
 function renderFinderResults(container, groups, mode) {
-  const dayEntries = WEEK_ORDER.filter((d) => groups[d].length);
+  const order = weekOrderStartingFrom(finderStartDay());
+  const dayEntries = order.filter((d) => groups[d].length);
   if (!dayEntries.length) {
     container.innerHTML = `<div class="empty-state">Start typing to search across the whole week.</div>`;
     return;
@@ -464,18 +413,15 @@ function renderFinderResults(container, groups, mode) {
     .map((day) => {
       const cards = groups[day]
         .map(
-          (
-            r,
-            i,
-          ) => `<div class="finder-card" style="--dc:${DAY_COLOR[day]}; animation-delay:${i * 25}ms">
+          (r, i) => `<div class="finder-card" style="--dc:${DAY_COLOR[day]}; animation-delay:${i * 25}ms">
             <div class="finder-card-top"><span>Slot ${r.slot} · ${r.start} - ${r.end}</span><span>${r.semester} · Sec ${r.section}</span></div>
             <div class="finder-card-title">${r.code} · ${r.title}</div>
             <div class="finder-card-sub">${mode === "room" ? `${r.teacher} · Room ${r.room}` : `Room ${r.room}`}</div>
-          </div>`,
+          </div>`
         )
         .join("");
       return `<div class="finder-day-group">
-        <div class="finder-day-label" style="--dc:${DAY_COLOR[day]}">${day.toUpperCase()}</div>
+        <div class="finder-day-label" style="--dc:${DAY_COLOR[day]}">${day === finderStartDay() ? "TODAY · " : ""}${day.toUpperCase()}</div>
         ${cards}
       </div>`;
     })
@@ -487,9 +433,7 @@ function setupRoomFinder() {
   const list = document.getElementById("roomList");
   const results = document.getElementById("roomResults");
 
-  const rooms = [
-    ...new Set(ALL_CLASSES.map((c) => c.room).filter(Boolean)),
-  ].sort();
+  const rooms = [...new Set(ALL_CLASSES.map((c) => c.room).filter(Boolean))].sort();
   list.innerHTML = rooms.map((r) => `<option value="${r}"></option>`).join("");
 
   let debounceT;
@@ -497,13 +441,8 @@ function setupRoomFinder() {
     clearTimeout(debounceT);
     debounceT = setTimeout(() => {
       const q = input.value.trim().toLowerCase();
-      if (!q) {
-        results.innerHTML = `<div class="empty-state">Start typing to search across the whole week.</div>`;
-        return;
-      }
-      const matches = ALL_CLASSES.filter((c) =>
-        c.room.toLowerCase().includes(q),
-      );
+      if (!q) { results.innerHTML = `<div class="empty-state">Start typing to search across the whole week.</div>`; return; }
+      const matches = ALL_CLASSES.filter((c) => c.room.toLowerCase().includes(q));
       renderFinderResults(results, groupByDayOrdered(matches), "room");
     }, 120);
   });
@@ -514,25 +453,16 @@ function setupTeacherFinder() {
   const list = document.getElementById("teacherList");
   const results = document.getElementById("teacherResults");
 
-  const teachers = [
-    ...new Set(ALL_CLASSES.map((c) => c.teacher).filter(Boolean)),
-  ].sort();
-  list.innerHTML = teachers
-    .map((t) => `<option value="${t}"></option>`)
-    .join("");
+  const teachers = [...new Set(ALL_CLASSES.map((c) => c.teacher).filter(Boolean))].sort();
+  list.innerHTML = teachers.map((t) => `<option value="${t}"></option>`).join("");
 
   let debounceT;
   input.addEventListener("input", () => {
     clearTimeout(debounceT);
     debounceT = setTimeout(() => {
       const q = input.value.trim().toLowerCase();
-      if (!q) {
-        results.innerHTML = `<div class="empty-state">Start typing to search across the whole week.</div>`;
-        return;
-      }
-      const matches = ALL_CLASSES.filter((c) =>
-        c.teacher.toLowerCase().includes(q),
-      );
+      if (!q) { results.innerHTML = `<div class="empty-state">Start typing to search across the whole week.</div>`; return; }
+      const matches = ALL_CLASSES.filter((c) => c.teacher.toLowerCase().includes(q));
       renderFinderResults(results, groupByDayOrdered(matches), "teacher");
     }, 120);
   });
@@ -542,17 +472,10 @@ function setupTeacherFinder() {
 
 function setupViewTabs() {
   const tabs = document.querySelectorAll(".view-tab");
-  const panels = {
-    routine: "view-routine",
-    room: "view-room",
-    teacher: "view-teacher",
-  };
+  const panels = { routine: "view-routine", room: "view-room", teacher: "view-teacher" };
   tabs.forEach((tab) => {
     tab.addEventListener("click", () => {
-      tabs.forEach((t) => {
-        t.classList.remove("is-active");
-        t.setAttribute("aria-selected", "false");
-      });
+      tabs.forEach((t) => { t.classList.remove("is-active"); t.setAttribute("aria-selected", "false"); });
       tab.classList.add("is-active");
       tab.setAttribute("aria-selected", "true");
       Object.values(panels).forEach((id) => {
@@ -592,8 +515,7 @@ function setupPickers() {
 
 function afterSelectionChange() {
   const today = nowInDhaka().weekday;
-  state.day =
-    WEEK_ORDER.includes(today) && today !== "Friday" ? today : "Saturday";
+  state.day = WEEK_ORDER.includes(today) && today !== "Friday" ? today : "Saturday";
   renderDayPills();
   renderDayClasses();
   renderUpNext();
@@ -602,14 +524,9 @@ function afterSelectionChange() {
 function setupSaveDefault() {
   const btn = document.getElementById("saveDefaultBtn");
   btn.addEventListener("click", () => {
-    localStorage.setItem(
-      CONFIG.DEFAULT_KEY,
-      JSON.stringify({ semester: state.semester, section: state.section }),
-    );
+    localStorage.setItem(CONFIG.DEFAULT_KEY, JSON.stringify({ semester: state.semester, section: state.section }));
     btn.classList.add("is-saved");
-    showToast(
-      `Saved ${state.semester} · Section ${state.section} as your default`,
-    );
+    showToast(`Saved ${state.semester} · Section ${state.section} as your default`);
     setTimeout(() => btn.classList.remove("is-saved"), 1400);
   });
 }
@@ -638,8 +555,7 @@ async function init() {
   applyDefaultsOrFirst();
 
   const today = nowInDhaka().weekday;
-  state.day =
-    WEEK_ORDER.includes(today) && today !== "Friday" ? today : "Saturday";
+  state.day = WEEK_ORDER.includes(today) && today !== "Friday" ? today : "Saturday";
 
   renderDayPills();
   renderDayClasses();
