@@ -81,7 +81,31 @@ Columns: `Semester | Section | Day | Time | Course Code | Course Title | Teacher
    are just numbers like `509`, others are `106 DSAL`). The finders do a simple
    case-insensitive substring match, so this already works across both formats.
 
-## How to deploy
+## Features added in v2 (after initial build)
+- **Dark mode** — toggle button in header (sun/moon icon), persists to `localStorage`
+  (`routine_theme`), defaults to system `prefers-color-scheme` on first visit.
+- **Skeleton loading** — shimmering placeholder cards show while `loadData()` runs on
+  first load (not on manual refresh, to avoid flicker).
+- **Swipe gesture** — swiping left/right on the day-classes area on mobile moves to the
+  next/previous day (Saturday→Thursday, Friday excluded).
+- **Share/Export** — the share icon next to "Your schedule" screenshots the day's class
+  list via `html2canvas` (loaded from cdnjs) and either opens the native share sheet
+  (`navigator.share` with a file, on supporting mobile browsers) or downloads a PNG.
+- **Up Next countdown** — live "Starts in N min" / "Ongoing · ends in N min" badge on the
+  Up Next card, updates every 30s via `setInterval`, only shown when the upcoming class
+  is today (not a future day).
+- **Free Room Finder** — 4th tab. Pick a Day + Slot, see every known room minus the ones
+  occupied by *any* semester/section at that day+slot. Room list is derived from
+  `ALL_CLASSES`, so it stays in sync with whatever data is loaded.
+- Gap/break-only-between-first-and-last-class logic (position-based, not time-based) —
+  see `renderDayClasses()` in script.js. Empty slots before the first class or after the
+  last one are never shown; internal gaps and the lunch break always are.
+
+## Still open
+- Apps Script Web App URL still needs to be pasted into `CONFIG.API_URL` (see above).
+- PWA/offline install and push notifications for upcoming classes were discussed as
+  ideas but not yet built — good next steps if the user wants them.
+
 1. Push `index.html`, `style.css`, `script.js`, `data.js` to a GitHub repo.
 2. Settings → Pages → deploy from the branch (root).
 3. Done — no build step, pure static files.

@@ -102,6 +102,25 @@ function showToast(msg) {
   showToast._t = setTimeout(() => el.classList.remove("is-visible"), 2600);
 }
 
+/* ---------------- dark mode ---------------- */
+
+function initTheme() {
+  const saved = localStorage.getItem("routine_theme");
+  const prefersDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+  const theme = saved || (prefersDark ? "dark" : "light");
+  document.documentElement.setAttribute("data-theme", theme);
+}
+
+function setupThemeToggle() {
+  const btn = document.getElementById("themeToggleBtn");
+  btn.addEventListener("click", () => {
+    const current = document.documentElement.getAttribute("data-theme");
+    const next = current === "dark" ? "light" : "dark";
+    document.documentElement.setAttribute("data-theme", next);
+    localStorage.setItem("routine_theme", next);
+  });
+}
+
 /* ---------------- data normalization ---------------- */
 
 // Accepts rows either shaped like the raw sheet (Semester, Section, Day,
@@ -169,37 +188,48 @@ async function fetchWithTimeout(url, ms) {
 
 async function loadData(forceRefresh = false) {
   const statusLine = document.getElementById("statusLine");
-  const canTryLive = CONFIG.API_URL && !CONFIG.API_URL.startsWith("PASTE_");
+  const skeleton = document.getElementById("skeletonList");
+  const dayClasses = document.getElementById("dayClasses");
+  if (!forceRefresh) {
+    skeleton.hidden = false;
+    dayClasses.hidden = true;
+  }
+  try {
+    const canTryLive = CONFIG.API_URL && !CONFIG.API_URL.startsWith("PASTE_");
 
-  if (canTryLive) {
-    try {
-      const raw = await fetchWithTimeout(CONFIG.API_URL, CONFIG.FETCH_TIMEOUT_MS);
-      const normalized = normalizeDataset(raw);
-      if (normalized.length) {
-        ALL_CLASSES = normalized;
-        localStorage.setItem(CONFIG.CACHE_KEY, JSON.stringify(normalized));
-        renderStatus(true);
-        if (forceRefresh) showToast("Routine updated from your Google Sheet");
-        return;
+    if (canTryLive) {
+      try {
+        const raw = await fetchWithTimeout(CONFIG.API_URL, CONFIG.FETCH_TIMEOUT_MS);
+        const normalized = normalizeDataset(raw);
+        if (normalized.length) {
+          ALL_CLASSES = normalized;
+          localStorage.setItem(CONFIG.CACHE_KEY, JSON.stringify(normalized));
+          renderStatus(true);
+          if (forceRefresh) showToast("Routine updated from your Google Sheet");
+          return;
+        }
+      } catch (err) {
+        // fall through to cache / fallback
       }
-    } catch (err) {
-      // fall through to cache / fallback
     }
-  }
 
-  const cached = localStorage.getItem(CONFIG.CACHE_KEY);
-  if (cached) {
-    try {
-      ALL_CLASSES = JSON.parse(cached);
-      renderStatus(false);
-      if (forceRefresh) showToast(canTryLive ? "Couldn't reach your sheet — showing last saved data" : "Showing saved data");
-      return;
-    } catch (e) { /* ignore, fall through */ }
-  }
+    const cached = localStorage.getItem(CONFIG.CACHE_KEY);
+    if (cached) {
+      try {
+        ALL_CLASSES = JSON.parse(cached);
+        renderStatus(false);
+        if (forceRefresh) showToast(canTryLive ? "Couldn't reach your sheet — showing last saved data" : "Showing saved data");
+        return;
+      } catch (e) { /* ignore, fall through */ }
+    }
 
-  ALL_CLASSES = normalizeDataset(typeof FALLBACK_CLASSES !== "undefined" ? FALLBACK_CLASSES : []);
-  renderStatus(false);
-  if (forceRefresh) showToast(canTryLive ? "Couldn't reach your sheet — showing sample data" : "Showing sample data");
+    ALL_CLASSES = normalizeDataset(typeof FALLBACK_CLASSES !== "undefined" ? FALLBACK_CLASSES : []);
+    renderStatus(false);
+    if (forceRefresh) showToast(canTryLive ? "Couldn't reach your sheet — showing sample data" : "Showing sample data");
+  } finally {
+    skeleton.hidden = true;
+    dayClasses.hidden = false;
+  }
 }
 
 function renderStatus(isLive) {
@@ -364,6 +394,8 @@ function renderDayClasses() {
 
 /* ---------------- up next ---------------- */
 
+let upNextInterval = null;
+
 function renderUpNext() {
   const card = document.getElementById("upNextCard");
   if (!state.semester || !state.section) { card.hidden = true; return; }
@@ -386,10 +418,42 @@ function renderUpNext() {
       document.getElementById("upNextCourse").textContent = `${upcoming.code} · ${upcoming.title}`;
       document.getElementById("upNextSub").textContent = `${upcoming.teacher} · Room ${upcoming.room}`;
       card.hidden = false;
+      startUpNextCountdown(day === weekday ? upcoming : null);
       return;
     }
   }
   card.hidden = true;
+  stopUpNextCountdown();
+}
+
+function startUpNextCountdown(upcoming) {
+  stopUpNextCountdown();
+  const el = document.getElementById("upNextCountdown");
+  if (!upcoming) { el.textContent = ""; return; }
+
+  const tick = () => {
+    const { minutes } = nowInDhaka();
+    const start = parseTimeToMinutes(upcoming.start);
+    const end = parseTimeToMinutes(upcoming.end);
+    if (minutes < start) {
+      const left = start - minutes;
+      el.textContent = left <= 1 ? "Starting now" : `Starts in ${left} min`;
+    } else if (minutes < end) {
+      const left = end - minutes;
+      el.textContent = `Ongoing · ends in ${left} min`;
+    } else {
+      el.textContent = "";
+      renderUpNext();
+    }
+  };
+  tick();
+  upNextInterval = setInterval(tick, 30000);
+}
+
+function stopUpNextCountdown() {
+  if (upNextInterval) { clearInterval(upNextInterval); upNextInterval = null; }
+  const el = document.getElementById("upNextCountdown");
+  if (el) el.textContent = "";
 }
 
 /* ---------------- room / teacher finders ---------------- */
@@ -468,11 +532,130 @@ function setupTeacherFinder() {
   });
 }
 
+/* ---------------- free room finder ---------------- */
+
+function setupFreeRoomFinder() {
+  const daySel = document.getElementById("freeDaySelect");
+  const slotSel = document.getElementById("freeSlotSelect");
+  const results = document.getElementById("freeRoomResults");
+
+  daySel.innerHTML = WEEK_ORDER.filter((d) => d !== "Friday")
+    .map((d) => `<option value="${d}">${d}</option>`).join("");
+
+  const classSlots = SLOT_TEMPLATE.filter((s) => !s.break);
+  slotSel.innerHTML = classSlots
+    .map((s) => `<option value="${s.slot}">Slot ${s.slot} · ${s.start} - ${s.end}</option>`).join("");
+
+  const { weekday, minutes } = nowInDhaka();
+  daySel.value = WEEK_ORDER.includes(weekday) && weekday !== "Friday" ? weekday : "Saturday";
+  const currentSlot = classSlots.find((s) => minutes >= parseTimeToMinutes(s.start) && minutes < parseTimeToMinutes(s.end));
+  slotSel.value = currentSlot ? currentSlot.slot : classSlots[0].slot;
+
+  const render = () => {
+    const day = daySel.value;
+    const slot = parseInt(slotSel.value, 10);
+    const occupied = new Map();
+    ALL_CLASSES.filter((c) => c.day === day && c.slot === slot).forEach((c) => {
+      if (!c.room) return;
+      if (!occupied.has(c.room)) occupied.set(c.room, []);
+      occupied.get(c.room).push(c);
+    });
+    const allRooms = [...new Set(ALL_CLASSES.map((c) => c.room).filter(Boolean))].sort();
+    const freeRooms = allRooms.filter((r) => !occupied.has(r));
+
+    if (!freeRooms.length) {
+      results.innerHTML = `<div class="empty-state">Every known room is booked in this slot.</div>`;
+      return;
+    }
+    results.innerHTML = `
+      <div class="free-room-summary">${freeRooms.length} of ${allRooms.length} rooms free · ${day}, Slot ${slot}</div>
+      <div class="free-room-grid">
+        ${freeRooms.map((r, i) => `<span class="free-room-chip" style="animation-delay:${i * 20}ms">${r}</span>`).join("")}
+      </div>`;
+  };
+
+  daySel.addEventListener("change", render);
+  slotSel.addEventListener("change", render);
+  render();
+}
+
+/* ---------------- swipe gesture (day switching) ---------------- */
+
+function setupSwipeGesture() {
+  const zone = document.getElementById("dayClasses");
+  let touchStartX = null;
+  let touchStartY = null;
+
+  zone.addEventListener("touchstart", (e) => {
+    touchStartX = e.touches[0].clientX;
+    touchStartY = e.touches[0].clientY;
+  }, { passive: true });
+
+  zone.addEventListener("touchend", (e) => {
+    if (touchStartX === null) return;
+    const dx = e.changedTouches[0].clientX - touchStartX;
+    const dy = e.changedTouches[0].clientY - touchStartY;
+    touchStartX = null;
+    if (Math.abs(dx) < 60 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
+
+    const activeWeek = WEEK_ORDER.filter((d) => d !== "Friday");
+    const idx = activeWeek.indexOf(state.day);
+    if (idx === -1) return;
+    const nextIdx = dx < 0
+      ? Math.min(idx + 1, activeWeek.length - 1)
+      : Math.max(idx - 1, 0);
+    if (nextIdx === idx) return;
+    state.day = activeWeek[nextIdx];
+    renderDayPills();
+    renderDayClasses();
+  }, { passive: true });
+}
+
+/* ---------------- share day as image ---------------- */
+
+function setupShareButton() {
+  const btn = document.getElementById("shareBtn");
+  btn.addEventListener("click", async () => {
+    if (typeof html2canvas === "undefined") {
+      showToast("Share feature couldn't load — check your connection");
+      return;
+    }
+    btn.classList.add("is-busy");
+    try {
+      const target = document.getElementById("dayClasses");
+      const canvas = await html2canvas(target, {
+        backgroundColor: getComputedStyle(document.body).backgroundColor,
+        scale: 2,
+      });
+      const fileName = `${state.day}-routine.png`;
+      canvas.toBlob(async (blob) => {
+        if (!blob) { showToast("Couldn't generate the image"); return; }
+        const file = new File([blob], fileName, { type: "image/png" });
+        if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+          try {
+            await navigator.share({ files: [file], title: `${state.day} routine`, text: `My ${state.day} class routine` });
+          } catch (e) { /* user cancelled share — no-op */ }
+        } else {
+          const link = document.createElement("a");
+          link.href = URL.createObjectURL(blob);
+          link.download = fileName;
+          link.click();
+          showToast(`Saved ${fileName}`);
+        }
+      });
+    } catch (err) {
+      showToast("Couldn't create the image");
+    } finally {
+      btn.classList.remove("is-busy");
+    }
+  });
+}
+
 /* ---------------- view tabs ---------------- */
 
 function setupViewTabs() {
   const tabs = document.querySelectorAll(".view-tab");
-  const panels = { routine: "view-routine", room: "view-room", teacher: "view-teacher" };
+  const panels = { routine: "view-routine", room: "view-room", teacher: "view-teacher", free: "view-free" };
   tabs.forEach((tab) => {
     tab.addEventListener("click", () => {
       tabs.forEach((t) => { t.classList.remove("is-active"); t.setAttribute("aria-selected", "false"); });
@@ -545,11 +728,13 @@ function setupRefresh() {
     renderUpNext();
     setupRoomFinder();
     setupTeacherFinder();
+    setupFreeRoomFinder();
     setTimeout(() => btn.classList.remove("is-spinning"), 700);
   });
 }
 
 async function init() {
+  initTheme();
   await loadData(false);
   populateSemesterSelect();
   applyDefaultsOrFirst();
@@ -566,6 +751,10 @@ async function init() {
   setupViewTabs();
   setupRoomFinder();
   setupTeacherFinder();
+  setupFreeRoomFinder();
+  setupThemeToggle();
+  setupSwipeGesture();
+  setupShareButton();
 }
 
 document.addEventListener("DOMContentLoaded", init);

@@ -22,10 +22,16 @@
       <span class="eyebrow">MOMENUR RASHID · CSE</span>
       <h1 class="wordmark">My class<br><em>routine.</em></h1>
     </div>
-    <button class="refresh-btn" id="refreshBtn" type="button" aria-label="Refresh data">
-      <svg class="refresh-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>
-      <span>Refresh</span>
-    </button>
+    <div class="header-actions">
+      <button class="theme-toggle-btn" id="themeToggleBtn" type="button" aria-label="Toggle dark mode">
+        <svg class="icon-sun" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+        <svg class="icon-moon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79Z"/></svg>
+      </button>
+      <button class="refresh-btn" id="refreshBtn" type="button" aria-label="Refresh data">
+        <svg class="refresh-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>
+        <span>Refresh</span>
+      </button>
+    </div>
   </header>
 
   <p class="status-line" id="statusLine">Loading your routine…</p>
@@ -35,6 +41,7 @@
     <button class="view-tab is-active" data-view="routine" role="tab" aria-selected="true">Routine</button>
     <button class="view-tab" data-view="room" role="tab" aria-selected="false">Room Finder</button>
     <button class="view-tab" data-view="teacher" role="tab" aria-selected="false">Teacher Finder</button>
+    <button class="view-tab" data-view="free" role="tab" aria-selected="false">Free Rooms</button>
   </nav>
 
   <!-- ===================== ROUTINE VIEW ===================== -->
@@ -67,6 +74,7 @@
           <span id="upNextSub"></span>
         </div>
       </div>
+      <span class="up-next-countdown" id="upNextCountdown"></span>
     </div>
 
     <div class="weekly-plan-head">
@@ -74,10 +82,21 @@
         <span class="eyebrow eyebrow-muted">WEEKLY PLAN</span>
         <h2>Your schedule</h2>
       </div>
-      <span class="class-count" id="classCount"></span>
+      <div class="weekly-plan-actions">
+        <span class="class-count" id="classCount"></span>
+        <button class="share-btn" id="shareBtn" type="button" aria-label="Share this day">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7"/><path d="M16 6l-4-4-4 4"/><path d="M12 2v14"/></svg>
+        </button>
+      </div>
     </div>
 
     <div class="day-pills" id="dayPills"></div>
+
+    <div class="skeleton-list" id="skeletonList" hidden>
+      <div class="skeleton-card"></div>
+      <div class="skeleton-card"></div>
+      <div class="skeleton-card"></div>
+    </div>
 
     <div class="day-classes" id="dayClasses"></div>
 
@@ -111,6 +130,26 @@
     <div class="finder-results" id="teacherResults"></div>
   </section>
 
+  <!-- ===================== FREE ROOMS VIEW ===================== -->
+  <section class="view-panel" id="view-free" role="tabpanel" hidden>
+    <div class="finder-head">
+      <span class="eyebrow eyebrow-muted">SMART FINDER</span>
+      <h2>Free Rooms</h2>
+      <p class="finder-copy">Pick a day and a time slot to see which rooms are empty right then — handy for group study or practice.</p>
+    </div>
+    <div class="picker-row">
+      <label class="picker">
+        <span>Day</span>
+        <select id="freeDaySelect"></select>
+      </label>
+      <label class="picker">
+        <span>Slot</span>
+        <select id="freeSlotSelect"></select>
+      </label>
+    </div>
+    <div class="finder-results" id="freeRoomResults"></div>
+  </section>
+
   <footer class="site-footer">
     Crafted with <span class="heart">♥</span> by Momenur Rashid
   </footer>
@@ -118,7 +157,9 @@
 </div>
 
 <div class="toast" id="toast"></div>
+<canvas id="shareCanvas" hidden></canvas>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="data.js"></script>
 <script src="script.js"></script>
 </body>

@@ -47,12 +47,47 @@
   --font-body: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
+/* =========================================================
+   DARK MODE
+   ========================================================= */
+html[data-theme="dark"]{
+  --bg: #14152A;
+  --surface: #1D1F3A;
+  --surface-2: #262847;
+  --ink: #F1F0FB;
+  --ink-soft: #ABADD4;
+  --ink-faint: #6F7199;
+  --line: #33355A;
+  --accent-soft: #2B2860;
+}
+html[data-theme="dark"] .bg-decor{
+  background:
+    radial-gradient(560px 320px at 90% -8%, rgba(50,46,140,.28), transparent 60%),
+    radial-gradient(480px 300px at -10% 18%, rgba(226,73,108,.16), transparent 60%);
+}
+html[data-theme="dark"] .refresh-btn,
+html[data-theme="dark"] .theme-toggle-btn{ background: var(--surface-2); }
+html[data-theme="dark"] .refresh-btn:hover{ background: var(--accent); }
+html[data-theme="dark"] .up-next-card{ box-shadow: 0 20px 40px -16px rgba(0,0,0,.55); }
+html[data-theme="dark"] .class-card,
+html[data-theme="dark"] .finder-card,
+html[data-theme="dark"] .picker select,
+html[data-theme="dark"] .finder-search input{ box-shadow: 0 1px 2px rgba(0,0,0,.2), 0 10px 24px -14px rgba(0,0,0,.5); }
+
+
 @media (prefers-reduced-motion: reduce){
   *{ animation-duration: .001ms !important; transition-duration: .001ms !important; }
 }
 
 *{ box-sizing: border-box; }
 html{ -webkit-tap-highlight-color: transparent; }
+
+/* The `hidden` attribute must always win over any component's own
+   `display` rule — without this, elements like .skeleton-list and
+   .day-classes (which set their own `display: flex`) never actually
+   hide when toggled, so the skeleton can appear stuck on screen. */
+[hidden]{ display: none !important; }
+
 body{
   margin:0;
   background: var(--bg);
@@ -62,6 +97,7 @@ body{
   line-height: 1.5;
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;
+  transition: background var(--dur-l) var(--ease), color var(--dur-l) var(--ease);
 }
 
 ::selection{ background: var(--accent); color: #fff; }
@@ -132,6 +168,32 @@ body{
 .refresh-icon{ transition: transform var(--dur-l) var(--ease); }
 .refresh-btn.is-spinning .refresh-icon{ animation: spin .7s linear; }
 @keyframes spin{ to{ transform: rotate(360deg); } }
+
+.theme-toggle-btn{
+  flex: none;
+  display:flex; align-items:center; justify-content:center;
+  width: 38px; height: 38px;
+  background: var(--surface-2);
+  color: var(--ink);
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  margin-top: 2px;
+  margin-right: 8px;
+  position: relative;
+  transition: background var(--dur-s) var(--ease), transform var(--dur-s) var(--ease);
+}
+.theme-toggle-btn:active{ transform: scale(.88) rotate(-15deg); }
+.theme-toggle-btn .icon-sun,
+.theme-toggle-btn .icon-moon{
+  position:absolute;
+  transition: opacity var(--dur-m) var(--ease), transform var(--dur-m) var(--ease);
+}
+.theme-toggle-btn .icon-moon{ opacity:0; transform: rotate(-60deg) scale(.5); }
+.theme-toggle-btn .icon-sun{ opacity:1; transform: rotate(0) scale(1); }
+html[data-theme="dark"] .theme-toggle-btn .icon-sun{ opacity:0; transform: rotate(60deg) scale(.5); }
+html[data-theme="dark"] .theme-toggle-btn .icon-moon{ opacity:1; transform: rotate(0) scale(1); }
+.header-actions{ display:flex; align-items:flex-start; }
 
 .status-line{
   margin: 14px 2px 20px;
@@ -228,7 +290,12 @@ body{
 }
 .save-default-btn:hover{ background: #E3E1FA; }
 .save-default-btn:active{ transform: scale(.98); }
-.save-default-btn.is-saved{ background: var(--thu); color:#fff; }
+.save-default-btn.is-saved{ background: var(--thu); color:#fff; animation: savePop var(--dur-l) var(--ease); }
+@keyframes savePop{
+  0%{ transform: scale(1); }
+  40%{ transform: scale(1.045); }
+  100%{ transform: scale(1); }
+}
 
 @media (min-width: 480px){
   .save-default-btn{ flex: 0 0 auto; }
@@ -267,6 +334,18 @@ body{
 .up-next-info strong{ font-size: 18px; font-weight: 700; }
 .up-next-info span{ font-size: 13.5px; color: #D8D5FF; }
 
+.up-next-countdown{
+  display:inline-flex; align-self:flex-start;
+  margin-top: 14px;
+  background: rgba(255,255,255,.16);
+  padding: 6px 12px;
+  border-radius: var(--radius-pill);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .01em;
+}
+.up-next-countdown:empty{ display:none; }
+
 @media (min-width: 480px){
   .up-next-body{ flex-direction:row; align-items:center; justify-content:space-between; }
   .up-next-time{ flex-direction:column; align-items:flex-start; gap:2px; }
@@ -285,7 +364,23 @@ body{
   font-weight: 600;
   font-size: 25px;
 }
+.weekly-plan-actions{ display:flex; align-items:center; gap:10px; }
 .class-count{ font-size: 12.5px; color: var(--ink-faint); font-weight:600; white-space:nowrap; }
+
+.share-btn{
+  display:flex; align-items:center; justify-content:center;
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  border: 1.5px solid var(--line);
+  background: var(--surface);
+  color: var(--ink-soft);
+  cursor: pointer;
+  transition: transform var(--dur-s) var(--ease), background var(--dur-s) var(--ease), color var(--dur-s) var(--ease), border-color var(--dur-s) var(--ease);
+}
+.share-btn:hover{ background: var(--accent-soft); color: var(--accent); border-color: var(--accent-soft); }
+.share-btn:active{ transform: scale(.9); }
+.share-btn.is-busy{ animation: pulse 1s ease-in-out infinite; }
+@keyframes pulse{ 50%{ opacity:.4; } }
 
 .day-pills{
   display:flex; gap: 8px;
@@ -331,6 +426,21 @@ body{
 }
 @media (min-width: 640px){
   .day-classes{ display:grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+}
+
+.skeleton-list{
+  display:flex; flex-direction:column; gap: 12px;
+}
+.skeleton-card{
+  height: 92px;
+  border-radius: var(--radius-m);
+  background: linear-gradient(100deg, var(--surface-2) 30%, var(--line) 50%, var(--surface-2) 70%);
+  background-size: 240% 100%;
+  animation: shimmer 1.3s ease-in-out infinite;
+}
+@keyframes shimmer{
+  0%{ background-position: 120% 0; }
+  100%{ background-position: -20% 0; }
 }
 
 .class-card{
@@ -439,6 +549,25 @@ body{
 }
 
 .finder-results{ display:flex; flex-direction:column; gap: 10px; }
+
+.free-room-summary{
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink-soft);
+  margin-bottom: 4px;
+}
+.free-room-grid{
+  display:flex; flex-wrap: wrap; gap: 8px;
+}
+.free-room-chip{
+  background: var(--thu-soft, var(--accent-soft));
+  color: var(--thu);
+  font-weight: 700;
+  font-size: 13px;
+  padding: 8px 14px;
+  border-radius: var(--radius-pill);
+  animation: cardIn var(--dur-m) var(--ease) backwards;
+}
 
 .finder-day-group{ margin-bottom: 4px; }
 .finder-day-label{
